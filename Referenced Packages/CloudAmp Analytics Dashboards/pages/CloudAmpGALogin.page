@@ -1,0 +1,25 @@
+<apex:page controller="CloudAmpGA.CloudAmpGALoginController" action="{!authenticate}" showHeader="false" sidebar="false">
+    <apex:form >
+        <apex:messages />
+        <apex:pageBlock rendered="{!authComplete}">
+            <div style="font-weight: bold; font-size: 14px; margin: 20px 30px; color: #3a3;">
+                Successfully authenticated and obtained authorization tokens from Google Analytics.
+                Reloading settings ...
+            </div>
+            <script type="text/javascript">
+                function reloadParent() {
+                    window.close();
+                    window.opener.location.reload();
+                }
+                
+                window.setTimeout(reloadParent, 1000);
+            </script>
+        </apex:pageBlock>
+        <apex:pageBlock rendered="{!isError}">
+        	<div style="font-weight: bold; font-size: 14px; margin: 20px 30px; color: #a33;">
+        		Unable to authenticate with Google. An error occurred during authentication with the
+        		Google Analytics API. Please close the window and retry authentication.
+        	</div>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

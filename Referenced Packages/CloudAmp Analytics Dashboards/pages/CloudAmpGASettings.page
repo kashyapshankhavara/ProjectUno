@@ -1,0 +1,331 @@
+<apex:page controller="CloudAmpGA.CloudAmpGASettingsController" action="{!reAuthenticate}" docType="html-5.0" sidebar="false" 
+				tabStyle="Google_Analytics_Dash_Settings__tab" showChat="false" title="CloudAmp Analytics Dashboards">
+	<apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js" />
+	<apex:includeScript value="{!$Resource.CloudAmpGA__SpinJS}" />
+   	<apex:sectionHeader subtitle="CloudAmp Analytics Dashboards" />
+    <script type="text/javascript">
+    function openWin(url) {
+        window.open(url, '_blank', 'width=800,height=480,location=0,resizable=yes,toolbar=no,status=no,menubar=no,scrollbars=1', 1);
+        return false;
+    }
+    </script>
+    <style type="text/css">
+    .btn-remove { color: red !important; position: absolute; bottom: 0; left: 25%; }
+    .selected-profile {
+    	 text-align: left; width: 19%; height: 130px; display: inline-block; padding: 5px; 
+    	 margin: 0; vertical-align: top; position: relative;
+    }
+    .selected-profile .no-profile {
+    	text-align: center; font-size: 14px; font-weight: bold; color: red; margin-top: 25px;
+    }
+    .messageTable .messageText h4 { display: none; }
+    .messageTable .messageText, .messageTable ul li { font-size: 14px; font-weight: bold; }
+    #pageOverlayDivHolder { 
+    	width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 99999; cursor: wait; background-color: rgba(100, 100, 100, 0.2);
+    }
+    #pageOverlayDiv {
+		width: 300px; height: 25px; padding: 12px; text-align: center;
+		position: absolute; top: 20px; right: 20px; border-radius: 6px; min-width: 100px;
+    }
+    #pageOverlayDivText { 
+    	font-size: 20px; font-weight: bold; font-style: italic; display: inline-block; margin-left: 20px; margin-top: 3px;  color: darkblue;
+   	}
+   	#profileDateSelectionBackground {
+    	width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 99999; background-color: rgba(100, 100, 100, 0.8);
+   	}
+   	#profileDateSelection {
+   		border: 10px solid #444; border-radius: 3px; color: #333; font-size: 14px; position: absolute;
+   		width: 500px; height: 300px; background-color: #fafafa; left: 50%; top: 50%; margin-top: -135px; margin-left: -250px;
+   	}
+   	#profileDateSelection div.close {
+   		cursor: pointer; height: 30px; position: absolute; right: -27px; top: -24px; width: 30px;
+  	}
+  	#profileDateSelectionContent {
+  		margin: 4px 7px;
+  	}
+  	#profileDateSelectionContent button {
+  		padding: 4px 10px; font-weight: bold; font-size: 14px;
+  	}
+    </style>
+    <apex:form >
+		<apex:actionFunction action="{!doProfileRequest}" name="jsCallAcceptProfile" rerender="theProfileStatusPanel,thePageMessages" 
+				oncomplete="doProfileRequestMore()">
+			<apex:param name="id" value="" />
+			<apex:param name="accountId" value="" />
+			<apex:param name="webPropertyId" value="" />
+			<apex:param name="startOn" value="" />
+		</apex:actionFunction>
+		<apex:actionFunction action="{!doProfileRequestComplete}" name="jsCallFinishAcceptProfile" rerender="theBlock" status="ajaxStatus" />
+		<apex:outputPanel id="theProfileStatusPanel">
+			<script>var requestContinue = {!hasMoreRequests};</script>
+		</apex:outputPanel>
+		<script>
+			function doProfileRequestMore() {
+				if (requestContinue) {
+					jsCallAcceptProfile();
+				}
+				else {
+					jsCallFinishAcceptProfile();
+				}
+			}
+		</script>
+    	<apex:pageBlock id="theBlock">
+    		<div style="text-align: center;"><apex:image value="{!$Resource.CloudAmpGA__CloudAmpLogo}" width="150" height="27" /></div>
+    		<p id="pageMessageContainer"><apex:pageMessages id="thePageMessages" /></p>
+    		<p>
+    			CloudAmp Analytics Dashboards give you multiple dashboards with key Google Analytics metrics,
+    			right inside of Salesforce, and automatically imports data from Google Analytics into Salesforce.
+    		</p>
+            <p></p>
+    		<apex:outputPanel rendered="{!sectionShowAuth}" title="Select Google Analytics Login">
+    			<p>
+    				Click on the <strong>Connect to Google Analytics</strong> button to select your Google Analytics account
+    				and authorize CloudAmp to import data into Salesforce. Once selected, you will be provided
+    				with a list of profiles available in your account, from which you can select up to
+    				<strong>{!profileLimit}</strong> profiles for which data will be imported.
+    			</p>
+    			<p>
+    				CloudAmp will import up to 30 days of historical data to immediately populate the pre-built
+    				reports and the dashboard and will them import metrics from Google Analytics once per day after
+    				that.
+    			</p>
+                <p></p>
+                <div style="text-align: center;">
+                    <apex:commandButton value="Connect to Google Analytics" style="padding: 5px 10px; font-weight: bold; font-size: 14px;"
+                    	immediate="true" onclick="return openWin('{!loginPage}')"/>
+                </div>
+    		</apex:outputPanel>
+	    	<apex:outputPanel rendered="{!sectionShowProfileSelection}">
+	   			<p>
+	   				Following are the list of Google Analytics profiles accessible in the provided Google Analytics account.
+	   				Choose up to <strong>{!profileLimit}</strong> profiles for which the analytics data needs to be imported. 
+	   				Once a profile is selected, CloudAmp will import up to the last 30 days of available metrics data into the 
+	   				Salesforce database automatically. After that a nightly scheduled task will continue to import daily metrics 
+	   				on a regular basis.
+	   			</p>
+	   			<p></p>
+	   			<apex:pageBlockTable var="p" value="{!filteredProfiles.items}" cellpadding="2" cellspacing="2" columns="6">
+	   				<apex:column value="{!p.name}" headerValue="Name" />
+	                   <apex:column value="{!p.accountId}" headerValue="Account ID" />
+	                   <apex:column value="{!p.webPropertyId}" headerValue="Web Property ID" />
+	                   <apex:column value="{!p.id}" headerValue="Profile ID" />
+	                   <apex:column >
+							<apex:facet name="header">Create Date/Time</apex:facet>
+							<apex:outputText value="{0, date, MM/dd/yyyy HH:MM a}">
+								<apex:param value="{!p.created}" />
+							</apex:outputText>
+	                   </apex:column>
+	                   <apex:column style="text-align: center;">
+	                   		<apex:commandButton value="Select Profile" 
+	                   			onclick="return acceptProfile('{!p.id}', '{!p.accountId}', '{!p.webPropertyId}', '{!p.created}');" />
+	                   </apex:column>
+	   			</apex:pageBlockTable>
+	  		</apex:outputPanel>
+	  		<apex:outputPanel rendered="{!sectionShowSelectedProfiles}">
+	   			<p>
+	   				Following are the list of profiles selected by you from the provided Google Analytics account. If
+	   				you would like to select additional profiles, click on the <strong>Select Profile</strong> button available above
+	   				in the list of profiles. You can select a maximum of <strong>{!profileLimit}</strong> profiles. Once
+	   				you have selected <strong>{!profileLimit}</strong> profiles, you will need to remove an existing profile
+	   				to be able to select another one.
+	   			</p>
+	   			<p>
+	   				To remove an already selected profile click on the <strong>Remove Profile</strong> button.
+	   				<span style="color: red;"><strong>WARNING:</strong></span> All of the collected metrics data
+	   				for the profile will be deleted along with the profile information from the Salesforce database.
+	   			</p>
+	   			<p>
+	   				To remove all collected Google Analytics metrics including all the selected profiles and the
+	   				account information OR to select a different Google Analytics account, click on the <strong>Clear All Data</strong>
+	   				button. <span style="color: red;"><strong>WARNING:</strong></span> All collected metrics data for all
+	   				the selected profiles including the profile information and the Google Analytics account information
+	   				will be removed from the Salesforce database.
+	   			</p>
+	   			<p></p>
+	   			<p></p>
+	   			<div style="background-color: #fff; padding: 10px 5px 20px 5px; vertical-align: top; width: 100%;">
+		   			<apex:variable value="{!1}" var="profileNum" />
+					<apex:repeat value="{!gaProfilesList}" var="p">
+						<div class="selected-profile">
+							<apex:outputText rendered="{!IF(FLOOR(profileNum) != FLOOR(p.CloudAmpGA__Profile_Number__c), True, False)}">
+								<div style="text-align:center;"><strong>Profile #{!FLOOR(profileNum)}</strong></div><br />
+								<div class="no-profile">No Profile Selected</div>
+							</apex:outputText>
+							<apex:outputText rendered="{!IF(FLOOR(profileNum) == FLOOR(p.CloudAmpGA__Profile_Number__c), True, False)}">
+								<div style="text-align:center;"><strong>Profile #{!FLOOR(profileNum)}</strong></div><br />
+								Name: <strong>{!p.Name__c}</strong><br />
+								Profile ID: <strong>{!p.CloudAmpGA__Profile_Id__c}</strong><br />
+								Account ID: <strong>{!p.Account_Id__c}</strong><br />
+								Web Property ID: <strong>{!p.Web_Property_Id__c}</strong>
+			                  	<!-- NOTE: Don't change to command button. Bug in SF prevents parameters to get back if no AJAX is used -->
+			                  	<apex:commandButton value="Remove Profile" action="{!removeProfile}" styleClass="btn-remove" rerender="theBlock" status="ajaxStatus">
+			                  		<apex:param name="id" value="{!p.CloudAmpGA__Profile_Id__c}" />
+			                  	</apex:commandButton>
+							</apex:outputText>
+						</div>
+						<apex:variable var="profileNum" value="{!profileNum + 1}" />
+					</apex:repeat>
+				</div>
+	   		</apex:outputPanel>
+	   		<apex:outputPanel rendered="{!sectionHasData}">
+	   			<p></p>
+	   			<apex:outputText rendered="{!AND(NOT(sectionShowDisableScheduler), sectionShowSelectedProfiles)}">
+	   				<p>
+	   					<span style="color: green;"><strong>Note:</strong></span> The scheduled importer has not been enabled on
+	   					this account. Click on the <strong>Enable Scheduler</strong> button to enable the scheduled
+	   					importer to import metrics data on a daily basis for the selected profiles to maintain
+	   					up-to-date dashboards and reports. If you had disabled the scheduler previously, then when
+	   					it is enabled the daily metrics data for the profiles will automatically be pulled for all
+	   					the profiles till yesterday (if they have not already been pulled).
+	   				</p>
+	   			</apex:outputText>
+	   			<apex:outputText rendered="{!AND(sectionShowDisableScheduler, sectionShowSelectedProfiles)}">
+	   				<p>
+	   					The scheduled importer has already been enabled on this account. If you would like to 
+	   					disable the scheduled import click on the <strong>Disable Scheduler</strong>.
+	   					<span style="color: red;"><strong>WARNING:</strong></span> If you disable the scheduler
+	   					the profile metrics for all profiles will not be imported on a daily basis. You will have
+	   					to re-enable the scheduler to continue import of metrics.
+	   				</p>
+	   			</apex:outputText>
+	   			<p></p>
+	   			
+	    		<div style="text-align: center;">
+	    			<apex:commandButton action="{!removeScheduler}" rendered="{!AND(sectionShowDisableScheduler, sectionShowSelectedProfiles)}"
+	    				style="padding: 5px 10px; font-weight: bold; font-size: 14px;" value="Disable Scheduler" rerender="theBlock" status="ajaxStatus" />&nbsp;
+	    			<apex:commandButton action="{!addScheduler}" rendered="{!AND(NOT(sectionShowDisableScheduler), sectionShowSelectedProfiles)}"
+	    				style="padding: 5px 10px; font-weight: bold; font-size: 14px;" value="Enable Scheduler" rerender="theBlock" status="ajaxStatus" />&nbsp;
+	    			<apex:commandButton action="{!removeAllData}" rendered="{!sectionHasData}" 
+	                	style="padding: 5px 10px; font-weight: bold; font-size: 14px;" value="Clear All Data" rerender="theBlock" status="ajaxStatus" />
+	    		</div>
+	    	</apex:outputPanel>
+    	</apex:pageBlock>
+    	<apex:actionStatus id="ajaxStatus" onstart="showOverlay();" onstop="hideOverlay();" />
+    </apex:form>
+    <div id="pageOverlayDivHolder" class="zen">
+	    <div id="pageOverlayDiv" class="zen-headerBottom">
+	    	<div id="pageOverlayDivText">Please Wait ...</div>
+	    </div>
+    </div>
+	<div id="profileDateSelectionBackground">
+		<div id="profileDateSelection">
+			<div class="close"><apex:image value="{!$Resource.CloudAmpGA__CloseBox}" width="30" height="30" /></div>
+			<div id="profileDateSelectionContent">
+				<p>
+					Select the date range for the <strong>Google Analytics</strong> data to be <strong>imported into Salesforce</strong>. 
+					If the available metrics data is less than the number of days selected, only the data available will be pulled. 
+					A max of 2 years worth of metrics data can be pulled in the initial data load. 
+					By default, 30 days of metrics data will be pulled.
+				</p>
+				<fieldset>
+					<legend>Select date range for metrics load</legend>
+					<input type="radio" name="dateSelectGroup" id="dateSelectGroup30" value="30" checked="checked" />&nbsp;&nbsp;
+					<label for="dateSelectGroup30">Last 30 days</label><br />
+					<input type="radio" name="dateSelectGroup" id="dateSelectGroup60" value="60" />&nbsp;&nbsp;
+					<label for="dateSelectGroup60">Last 60 days</label><br />
+					<input type="radio" name="dateSelectGroup" id="dateSelectGroup90" value="90" />&nbsp;&nbsp;
+					<label for="dateSelectGroup90">Last 90 days</label><br />
+					<apex:outputPanel rendered="{!hasDateRangePrevYear}">
+						<input type="radio" name="dateSelectGroup" id="dateSelectGroupYr2" value="year2" />&nbsp;&nbsp;
+						<label for="dateSelectGroupYr2">From Jan 1st of {!dateRangePrevYear}</label><br />
+					</apex:outputPanel>
+					<input type="radio" name="dateSelectGroup" id="dateSelectGroupYr" value="year" />&nbsp;&nbsp;
+					<label for="dateSelectGroupYr">From Jan 1st of {!dateRangeYear}</label><br />
+					<input type="radio" name="dateSelectGroup" id="dateSelectGroupStart" value="start" />&nbsp;&nbsp;
+					<label id="startDateLabel" for="dateSelectGroupStart"></label><br />
+				</fieldset>
+				<p align="center">
+					<button id="profileDateSelectionSubmit">Fetch Metrics Data</button>&nbsp;&nbsp;
+					<button id="profileDateSelectionCancel">Cancel</button>
+				</p>
+			</div>
+		</div>
+	</div>
+    <script type="text/javascript">
+    	var j$ = jQuery.noConflict();
+		var opts = {
+			lines: 17, // The number of lines to draw
+			length: 5, // The length of each line
+			width: 2, // The line thickness
+			radius: 5, // The radius of the inner circle
+			corners: 0, // Corner roundness (0..1)
+			rotate: 0, // The rotation offset
+			direction: 1, // 1: clockwise, -1: counterclockwise
+			color: 'darkblue', // #rgb or #rrggbb or array of colors
+			speed: 1, // Rounds per second
+			trail: 36, // Afterglow percentage
+			shadow: false, // Whether to render a shadow
+			hwaccel: false, // Whether to use hardware acceleration
+			className: 'spinner', // The CSS class to assign to the spinner
+			zIndex: 2e9, // The z-index (defaults to 2000000000)
+			top: 'auto', // Top position relative to parent in px
+			left: '65px' // Left position relative to parent in px
+		};
+		var body = j$('body');
+		var target = j$('#pageOverlayDiv');
+		var spinner = new Spinner(opts).spin(target[0]);
+		var overlay = j$('#pageOverlayDivHolder');
+		overlay.appendTo(body);
+		overlay.hide();
+		
+		function showMessages() {
+			var pmc = j$('#pageMessageContainer');
+			var bodyPos = body.scrollTop();
+			var pmcPos = pmc.offset().top - 10;
+			if (bodyPos > pmcPos) body.animate({scrollTop: pmcPos}, 'slow');
+		}
+		
+		function showOverlay() { showMessages(); overlay.show(); }
+		function hideOverlay() { overlay.hide(); }
+		
+		var popup = j$('#profileDateSelectionBackground');
+		var label = j$('#startDateLabel');
+		popup.appendTo(body);
+		popup.hide();
+		var popupStatus = false;
+		
+		function loadPopup() {
+			if(!popupStatus) {
+				popupStatus = true;
+				body.css({'overflow': 'hidden'});
+				popup.fadeIn(0500);
+			}
+		}
+		
+		function disablePopup() {
+			if(popupStatus) {
+				popup.fadeOut('normal', function() {
+					body.css({'overflow': 'auto'});
+				});
+				popupStatus = false;
+			}
+		}
+		
+		popup.find('div.close').click(disablePopup);
+		j$('#profileDateSelectionCancel').click(disablePopup);
+		var profileId, accountId, webPropertyId;
+		j$('#profileDateSelectionSubmit').click(function() {
+			if(popupStatus) {
+				var dtVal = j$('input[name="dateSelectGroup"]:checked').val();
+				if (dtVal === null || dtVal === '') dtVal = '30';
+				popup.fadeOut('normal', function() {
+					body.css({'overflow': 'auto'});
+					showOverlay();
+					jsCallAcceptProfile(profileId, accountId, webPropertyId, dtVal);
+				});
+				popupStatus = false;
+			}
+		});
+		
+		function acceptProfile(id, acId, wpId, dt) {
+			dt = dt.substring(0, dt.indexOf(' '));
+			label.text('From ' + dt + ' (Profile creation date)');
+			j$('#dateSelectGroup30').attr('checked', true);
+			profileId = id;
+			accountId = acId;
+			webPropertyId = wpId;
+			loadPopup();
+			return false;
+		}
+    </script>
+</apex:page>

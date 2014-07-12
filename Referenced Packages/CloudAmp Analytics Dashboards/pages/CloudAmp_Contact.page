@@ -1,0 +1,8 @@
+<apex:page controller="CloudAmpGA.CloudAmpGAContactController" docType="html-5.0" sidebar="false" showChat="false" showHeader="false">
+ <apex:outputText style="text-align: left;">
+ <h2>Google Analytics Profile: {!profileName}</h2><br></br>
+   <a href="http://www.cloudamp.com" target="_blank"><apex:image value="{!$Resource.CloudAmpGA__CloudAmpLogoSm}" width="100" height="60"/></a><br />
+Dashboard by CloudAmp LLC <br></br>
+   <a href="http://cloudamp.com/contact/" target="_blank">Contact CloudAmp</a>
+   </apex:outputText>
+</apex:page>

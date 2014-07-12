@@ -1,0 +1,2 @@
+<apex:page controller="CloudAmpGA.CloudAmpGAContactController" docType="html-5.0" sidebar="false" showChat="false" showHeader="false" action="{!loadProfile3}">
+</apex:page>
